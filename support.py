@@ -20,7 +20,7 @@ ENV_FILE = '0compile.properties'
 XMLNS_0COMPILE = 'http://zero-install.sourceforge.net/2006/namespaces/0compile'
 
 zeroinstall_dir = os.environ.get('0COMPILE_ZEROINSTALL', None)
-if zeroinstall_dir:
+if zeroinstall_dir and arch._uname[0] != 'Windows':
 	# XXX: we're assuming that, if installed through 0install, 0launch requires
 	# the same version of Python as 0compile. This is currently needed for Arch
 	# Linux, but long-term we need to use the <runner>.

@@ -26,7 +26,7 @@ if 'DISPLAY' in os.environ:
 	del os.environ['DISPLAY']
 
 zeroinstall_dir = os.environ.get('0COMPILE_ZEROINSTALL', None)
-if zeroinstall_dir:
+if zeroinstall_dir and arch._uname[0] != 'Windows':
 	launch_command = [sys.executable, os.path.join(zeroinstall_dir, '0launch')]
 else:
 	launch_command = ['0launch']		# Package
