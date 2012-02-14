@@ -9,7 +9,7 @@ from optparse import OptionParser
 import tempfile
 
 from zeroinstall import SafeException
-from zeroinstall.injector import model, namespaces, run
+from zeroinstall.injector import model, namespaces, run, arch
 from zeroinstall.injector.iface_cache import iface_cache
 
 from support import BuildEnv, ensure_dir, XMLNS_0COMPILE, is_package_impl, parse_bool, depth
@@ -215,7 +215,7 @@ def do_build_internal(options, args):
 	info.setAttributeNS(None, 'time', time.strftime('%Y-%m-%d %H:%M').strip())
 	info.setAttributeNS(None, 'host', socket.getfqdn())
 	info.setAttributeNS(None, 'user', getpass.getuser())
-	uname = os.uname()
+	uname = arch._uname
 	info.setAttributeNS(None, 'arch', '%s-%s' % (uname[0], uname[4]))
 	stream = file(build_env_xml, 'w')
 	buildenv_doc.writexml(stream, addindent="  ", newl="\n")

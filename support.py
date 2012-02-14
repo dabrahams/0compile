@@ -7,7 +7,7 @@ from os.path import join
 from logging import info
 import ConfigParser
 
-from zeroinstall.injector import model, selections, qdom
+from zeroinstall.injector import model, selections, qdom, arch
 from zeroinstall.injector.arch import canonicalize_os, canonicalize_machine
 
 from zeroinstall.injector.iface_cache import iface_cache
@@ -146,7 +146,7 @@ def exec_maybe_sandboxed(readable, writable, tmpdir, prog, args):
 	os.execl(_pola_run, _pola_run, *pola_args)
 
 def get_arch_name():
-	uname = os.uname()
+	uname = arch._uname
 	target_os = canonicalize_os(uname[0])
 	target_machine = canonicalize_machine(uname[4])
 	if target_os == 'Darwin' and target_machine == 'i386':
