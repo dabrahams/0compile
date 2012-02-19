@@ -33,7 +33,7 @@ launch_prog.append('select')
 if os.path.isdir('dependencies'):
 	dep_dir = os.path.realpath('dependencies')
 	iface_cache.stores.stores.append(Store(dep_dir))
-	launch_prog += ['--with-store', dep_dir]
+	launch_prog.append('--with-store='+ dep_dir)
 
 class NoImpl:
 	id = "none"
