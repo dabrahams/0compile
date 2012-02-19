@@ -4,6 +4,7 @@
 import sys, os, __main__
 import pygtk; pygtk.require('2.0')
 import gtk, gobject
+from subprocess import Popen
 
 from zeroinstall.injector import reader, writer, model
 from zeroinstall.injector.iface_cache import iface_cache
@@ -158,7 +159,7 @@ class CompileBox(gtk.Dialog):
 		import signal
 		self.killed = True
 		self.add_msg('\nSending SIGTERM to process...')
-		os.kill(-self.child, signal.SIGTERM)
+		self.child.terminate()
 		return True
 	
 	def add_msg(self, msg):
@@ -175,30 +176,7 @@ class CompileBox(gtk.Dialog):
 		self.failure = failure
 		self.add_msg("Running: " + ' '.join(command) + "\n")
 
-		r, w = os.pipe()
-		try:
-			try:
-				self.child = os.fork()
-				if not self.child:
-					# We are the child
-					try:
-						try:
-							os.close(r)
-							os.dup2(w, 1)
-							os.dup2(w, 2)
-							os.close(w)
-							os.setpgrp()	# Become group leader
-							os.execvp(command[0], command)
-						except:
-							import traceback
-							traceback.print_exc()
-					finally:
-						os._exit(1)
-			finally:
-				os.close(w)
-		except:
-			os.close(r)
-			raise
+		self.child = Popen(command, stdout=sys.stdout, stderr=sys.stdout)
 
 		for resp in action_responses:
 			self.set_response_sensitive(resp, False)
@@ -231,13 +209,13 @@ class CompileBox(gtk.Dialog):
 			self.insert_at_end_and_scroll(data)
 			return True
 		else:
-			pid, status = os.waitpid(self.child, 0)
-			assert pid == self.child
+			child = self.child
+			status = child.wait()
 			self.child = None
 
 			self.set_responses_sensitive()
 
-			if os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0:
+			if child.returncode == 0:
 				self.success()
 			elif self.killed:
 				self.add_msg("\nCommand terminated at user's request.")
