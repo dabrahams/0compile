@@ -148,7 +148,8 @@ def exec_maybe_sandboxed(readable, writable, tmpdir, prog, args):
 	os.execl(_pola_run, _pola_run, *pola_args)
 
 def get_arch_name():
-	uname = arch._uname
+        import platform
+	uname = arch._uname + platform.uname()[len(arch._uname):]
 	target_os = canonicalize_os(uname[0])
 	target_machine = canonicalize_machine(uname[4])
 	if target_os == 'Darwin' and target_machine == 'i386':
