@@ -11,7 +11,7 @@ try:
 except:
 	coverage = None
 os.chdir(cwd)
-compile_code = os.path.join(compile_dir, '0compile')
+compile_code = os.path.join(compile_dir, '0compile.py')
 try:
 	class DummyStream():
 		def read(self):

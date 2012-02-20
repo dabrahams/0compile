@@ -25,7 +25,7 @@ For a full tutorial, see 0compile's homepage.</description>
   </release:management>
 
   <group main="0compile">
-    <command name="run" path="0compile">
+    <command name="run" path="0compile.py">
       <runner interface="http://repo.roscidus.com/python/python">
 	<version before="3"/>
       </runner>
