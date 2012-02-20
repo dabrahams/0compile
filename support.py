@@ -95,17 +95,33 @@ def wait_for_child(child):
 		raise SafeException('Command failed with signal %d' % os.WTERMSIG(status))
 
 def spawn_maybe_sandboxed(readable, writable, tmpdir, prog, args):
-	child = os.fork()
-	if child == 0:
+	from subprocess import Popen
+	from cPickle import dump
+	from tempfile import NamedTemporaryFile
+
+	t = NamedTemporaryFile(prefix='0compile')
+	dump((exec_maybe_sandboxed1, readable, writable,tmpdir, prog,args), t, protocol=2)
+	t.flush()
+
+	p = Popen([sys.executable, '-c',
+		   'import cPickle;'
+		   'f_args = cPickle.load(open(%r));'
+		   'f_args[0](*f_args[1:])'
+		   % t.name]
+		  , stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr
+		  , env=dict(PYTHONPATH=os.path.dirname(__file__),**os.environ)
+		  )
+	wait_for_child(p.pid)
+
+def exec_maybe_sandboxed1(readable, writable, tmpdir, prog, args):
+	try:
 		try:
-			try:
-				exec_maybe_sandboxed(readable, writable, tmpdir, prog, args)
-			except:
-				traceback.print_exc()
-		finally:
-			print >>sys.stderr, "Exec failed"
-			os._exit(1)
-	wait_for_child(child)
+			exec_maybe_sandboxed(readable, writable, tmpdir, prog, args)
+		except:
+			traceback.print_exc()
+	finally:
+		print >>sys.stderr, "Exec failed"
+		os._exit(1)
 
 def exec_maybe_sandboxed(readable, writable, tmpdir, prog, args):
 	"""execl prog, with (only) the 'writable' directories writable if sandboxing is available.

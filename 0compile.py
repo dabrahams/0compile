@@ -2,100 +2,101 @@
 # Copyright (C) 2006, Thomas Leonard
 # See the README file for details, or visit http://0install.net.
 
-__builtins__._ = lambda x: x
+if __name__ == '__main__':
+      __builtins__._ = lambda x: x
 
-import locale
-from optparse import OptionParser
-import os, sys
-from logging import warn
-import gobject; gobject.threads_init()
+      import locale
+      from optparse import OptionParser
+      import os, sys
+      from logging import warn
+      import gobject; gobject.threads_init()
 
-zeroinstall_dir = os.environ.get('0COMPILE_ZEROINSTALL', None)
-if zeroinstall_dir:
-	sys.path.insert(1, zeroinstall_dir)
+      zeroinstall_dir = os.environ.get('0COMPILE_ZEROINSTALL', None)
+      if zeroinstall_dir:
+              sys.path.insert(1, zeroinstall_dir)
 
-from zeroinstall import SafeException
+      from zeroinstall import SafeException
 
-class UsageError(SafeException): pass
+      class UsageError(SafeException): pass
 
-commands = []
+      commands = []
 
-import autocompile, setup, clean, copysrc, build, publish, gui, bugs, include_deps
-import support
+      import autocompile, setup, clean, copysrc, build, publish, gui, bugs, include_deps
+      import support
 
-version = '0.26'
+      version = '0.26'
 
-try:
-	locale.setlocale(locale.LC_ALL, '')
-except locale.Error:
-	warn('Error setting locale (eg. Invalid locale)')
+      try:
+              locale.setlocale(locale.LC_ALL, '')
+      except locale.Error:
+              warn('Error setting locale (eg. Invalid locale)')
 
-parser = OptionParser(usage="usage: %prog " + 
-			  '\n       %prog '.join([c.__doc__ for c in commands]))
+      parser = OptionParser(usage="usage: %prog " + 
+                                '\n       %prog '.join([c.__doc__ for c in commands]))
 
-parser.add_option("-c", "--console", help="never use GUI", action='store_true')
-parser.add_option("-v", "--verbose", help="more verbose output", action='count')
-parser.add_option("-V", "--version", help="display version information", action='store_true')
+      parser.add_option("-c", "--console", help="never use GUI", action='store_true')
+      parser.add_option("-v", "--verbose", help="more verbose output", action='count')
+      parser.add_option("-V", "--version", help="display version information", action='store_true')
 
-parser.disable_interspersed_args()
+      parser.disable_interspersed_args()
 
-(options, args) = parser.parse_args()
+      (options, args) = parser.parse_args()
 
-if options.version:
-	print "0compile (zero-install) " + version
-	print "Copyright (C) 2006 Thomas Leonard"
-	print "This program comes with ABSOLUTELY NO WARRANTY,"
-	print "to the extent permitted by law."
-	print "You may redistribute copies of this program"
-	print "under the terms of the GNU General Public License."
-	print "For more information about these matters, see the file named COPYING."
-	sys.exit(0)
+      if options.version:
+              print "0compile (zero-install) " + version
+              print "Copyright (C) 2006 Thomas Leonard"
+              print "This program comes with ABSOLUTELY NO WARRANTY,"
+              print "to the extent permitted by law."
+              print "You may redistribute copies of this program"
+              print "under the terms of the GNU General Public License."
+              print "For more information about these matters, see the file named COPYING."
+              sys.exit(0)
 
-if options.verbose:
-	import logging
-	logger = logging.getLogger()
-	if options.verbose == 1:
-		logger.setLevel(logging.INFO)
-	else:
-		logger.setLevel(logging.DEBUG)
+      if options.verbose:
+              import logging
+              logger = logging.getLogger()
+              if options.verbose == 1:
+                      logger.setLevel(logging.INFO)
+              else:
+                      logger.setLevel(logging.DEBUG)
 
-if options.console:
-	support.launch_prog.append('--console')
+      if options.console:
+              support.launch_prog.append('--console')
 
-if len(args) < 1:
-	parser.print_help()
-	sys.exit(1)
+      if len(args) < 1:
+              parser.print_help()
+              sys.exit(1)
 
-try:
-	pattern = args[0].lower()
-	matches = [c for c in commands if c.__name__[3:].replace('_', '-').startswith(pattern)]
-	if len(matches) == 0:
-		parser.print_help()
-		sys.exit(1)
-	if len(matches) > 1:
-		raise SafeException("What do you mean by '%s'?\n%s" %
-			(pattern, '\n'.join(['- ' + x.__name__[3:] for x in matches])))
-	matches[0](args[1:])
-except KeyboardInterrupt, ex:
-	print >>sys.stderr, "Interrupted"
-	sys.exit(1)
-except OSError, ex:
-	if options.verbose: raise
-	print >>sys.stderr, str(ex)
-	sys.exit(1)
-except IOError, ex:
-	if options.verbose: raise
-	print >>sys.stderr, str(ex)
-	sys.exit(1)
-except UsageError, ex:
-	print >>sys.stderr, str(ex)
-	print >>sys.stderr, "usage: " + os.path.basename(sys.argv[0]) + " " + matches[0].__doc__
-	sys.exit(1)
-except SafeException, ex:
-	if options.verbose: raise
-	try:
-		print >>sys.stderr, unicode(ex)
-	except:
-		print >>sys.stderr, repr(ex)
-	sys.exit(1)
+      try:
+              pattern = args[0].lower()
+              matches = [c for c in commands if c.__name__[3:].replace('_', '-').startswith(pattern)]
+              if len(matches) == 0:
+                      parser.print_help()
+                      sys.exit(1)
+              if len(matches) > 1:
+                      raise SafeException("What do you mean by '%s'?\n%s" %
+                              (pattern, '\n'.join(['- ' + x.__name__[3:] for x in matches])))
+              matches[0](args[1:])
+      except KeyboardInterrupt, ex:
+              print >>sys.stderr, "Interrupted"
+              sys.exit(1)
+      except OSError, ex:
+              if options.verbose: raise
+              print >>sys.stderr, str(ex)
+              sys.exit(1)
+      except IOError, ex:
+              if options.verbose: raise
+              print >>sys.stderr, str(ex)
+              sys.exit(1)
+      except UsageError, ex:
+              print >>sys.stderr, str(ex)
+              print >>sys.stderr, "usage: " + os.path.basename(sys.argv[0]) + " " + matches[0].__doc__
+              sys.exit(1)
+      except SafeException, ex:
+              if options.verbose: raise
+              try:
+                      print >>sys.stderr, unicode(ex)
+              except:
+                      print >>sys.stderr, repr(ex)
+              sys.exit(1)
 
