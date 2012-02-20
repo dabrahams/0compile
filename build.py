@@ -12,20 +12,20 @@ from zeroinstall import SafeException
 from zeroinstall.injector import model, namespaces, run, arch
 from zeroinstall.injector.iface_cache import iface_cache
 
-from support import BuildEnv, ensure_dir, XMLNS_0COMPILE, is_package_impl, parse_bool, depth
+from support import BuildEnv, ensure_dir, XMLNS_0COMPILE, is_package_impl, parse_bool, depth, uname
 from support import spawn_and_check, find_in_path, ENV_FILE, lookup, spawn_maybe_sandboxed, Prefixes
 
 def split_path(path):
-        result = []
-        while True:
-                h,t = os.path.split(path)
-                if t == '':
-                        break
-                result.append(t)
-                path = h
-        result.append(h)
-        result.reverse()
-        return result
+	result = []
+	while True:
+		h,t = os.path.split(path)
+		if t == '':
+			break
+		result.append(t)
+		path = h
+	result.append(h)
+	result.reverse()
+	return result
 
 if hasattr(os.path, 'relpath'):
 	relpath = os.path.relpath
@@ -117,7 +117,7 @@ def do_pkg_config_binding(binding, impl):
 				if name == 'prefix' and os.path.isabs(value):
 					print "Absolute prefix=%s in %s; overriding..." % (value, feed_name)
 					lines[i] = 'prefix=' + os.path.join(
-                                                path, os.path.splitdrive(value)[1][1:]) +'\n'
+						path, os.path.splitdrive(value)[1][1:]) +'\n'
 					write_pc(pc, lines)
 					break
 	do_env_binding(binding, path)
@@ -158,7 +158,7 @@ def fixup_generated_pkgconfig_file(pc_file):
 			print "Absolute prefix=%s in %s; fixing..." % (value, pc_file)
 			rel_path = relpath(value, os.path.dirname(pc_file))	# Requires Python 2.6
 			lines[i] = 'prefix=' + os.path.join(
-                                '${pcfiledir}', rel_path) + '\n'
+				'${pcfiledir}', rel_path) + '\n'
 			write_pc(pc_file, lines)
 			break
 
@@ -229,7 +229,6 @@ def do_build_internal(options, args):
 	info.setAttributeNS(None, 'time', time.strftime('%Y-%m-%d %H:%M').strip())
 	info.setAttributeNS(None, 'host', socket.getfqdn())
 	info.setAttributeNS(None, 'user', getpass.getuser())
-	uname = arch._uname
 	info.setAttributeNS(None, 'arch', '%s-%s' % (uname[0], uname[4]))
 	stream = file(build_env_xml, 'w')
 	buildenv_doc.writexml(stream, addindent="  ", newl="\n")
@@ -450,14 +449,14 @@ def write_sample_interface(buildenv, iface, src_impl):
 	def addSimple(parent, name, text = None):
 		elem = doc.createElementNS(XMLNS_IFACE, name)
 
-		parent.appendChild(doc.createTextNode('\n' + '  ' * (1 + depth(parent))))
+		parent.appendChild(doc.createTextNode('\n' + '	' * (1 + depth(parent))))
 		parent.appendChild(elem)
 		if text:
 			elem.appendChild(doc.createTextNode(text))
 		return elem
 
 	def close(element):
-		element.appendChild(doc.createTextNode('\n' + '  ' * depth(element)))
+		element.appendChild(doc.createTextNode('\n' + '	 ' * depth(element)))
 
 	addSimple(root, 'name', iface.name)
 	addSimple(root, 'summary', iface.summary)

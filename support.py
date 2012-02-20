@@ -16,11 +16,19 @@ from zeroinstall.zerostore import Store, NotStored
 
 def _(x): return x
 
+
+# This is An os.uname() substitute that uses as much of ZI's
+# arch._uname as is available and yet has all four elements one
+# normally expects from os.uname() on Posix (on Windows, arch._uname
+# has only two elements).  
+import platform
+uname = arch._uname + platform.uname()[len(arch._uname):]
+
 ENV_FILE = '0compile.properties'
 XMLNS_0COMPILE = 'http://zero-install.sourceforge.net/2006/namespaces/0compile'
 
 zeroinstall_dir = os.environ.get('0COMPILE_ZEROINSTALL', None)
-if zeroinstall_dir and arch._uname[0] != 'Windows':
+if zeroinstall_dir and uname[0] != 'Windows':
 	# XXX: we're assuming that, if installed through 0install, 0launch requires
 	# the same version of Python as 0compile. This is currently needed for Arch
 	# Linux, but long-term we need to use the <runner>.
@@ -164,8 +172,7 @@ def exec_maybe_sandboxed(readable, writable, tmpdir, prog, args):
 	os.execl(_pola_run, _pola_run, *pola_args)
 
 def get_arch_name():
-        import platform
-	uname = arch._uname + platform.uname()[len(arch._uname):]
+	import platform
 	target_os = canonicalize_os(uname[0])
 	target_machine = canonicalize_machine(uname[4])
 	if target_os == 'Darwin' and target_machine == 'i386':
