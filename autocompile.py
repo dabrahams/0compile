@@ -62,7 +62,9 @@ class AutoCompiler:
 		self.options = options
 		self.config = config
 
-	def pretty_print_plan(self, solver, root, indent = '- '):
+	def pretty_print_plan(self, solver, root, indent):
+		if '-' not in indent:
+			indent += '- '
 		"""Display a tree showing the selected implementations."""
 		iface = self.config.iface_cache.get_interface(root)
 		impl = solver.selections[iface]
@@ -79,36 +81,36 @@ class AutoCompiler:
 				msg = 'Use existing binary %s (%s)' % (impl.get_version(), impl.arch)
 			else:
 				msg = 'Use existing architecture-independent package %s' % impl.get_version()
-		self.note("%s%s: %s" % (indent, iface.get_name(), msg))
+		self.note(indent, "%s: %s" % (iface.get_name(), msg))
 
 		if impl:
 			indent = '  ' + indent
 			for x in impl.requires:
 				self.pretty_print_plan(solver, x.interface, indent)
 
-	def print_details(self, solver):
+	def print_details(self, solver, indent):
 		"""Dump debugging details."""
-		self.note("\nFailed. Details of all components and versions considered:")
+		self.note(indent, "\nFailed. Details of all components and versions considered:")
 		for iface in solver.details:
-			self.note('\n%s\n' % iface.get_name())
+			self.note('\n%s\n' % iface.get_name(), indent)
 			for impl, note in solver.details[iface]:
-				self.note('%s (%s) : %s' % (impl.get_version(), impl.arch or '*-*', note or 'OK'))
-		self.note("\nEnd details\n")
+				self.note(indent, '%s (%s) : %s' % (impl.get_version(), impl.arch or '*-*', note or 'OK'))
+		self.note(indent, "\nEnd details\n")
 
 	@tasks.async
-	def compile_and_register(self, policy):
+	def compile_and_register(self, policy, indent):
 		def valid_autocompile_feed(binary_feed):
 			cache = policy.config.iface_cache
 			local_feed_impls = cache.get_feed(local_feed).implementations
 			if len(local_feed_impls) != 1:
-				self.note("Invalid autocompile feed '%s'; expected exactly one implementation!" % binary_feed)
+				self.note(indent, "Invalid autocompile feed '%s'; expected exactly one implementation!" % binary_feed)
 				return False
 			impl, = local_feed_impls.values()
 			try:
 				cache.stores.lookup_any(impl.digests)
 				return True
 			except NotStored, ex:
-				self.note("Build metadata file '%s' exists but implementation is missing: %s" % (local_feed, ex))
+				self.note(indent, "Build metadata file '%s' exists but implementation is missing: %s" % (local_feed, ex))
 				return False
 
 		local_feed_dir = basedir.save_config_path('0install.net', '0compile', 'builds', model._pretty_escape(policy.root))
@@ -178,18 +180,18 @@ class AutoCompiler:
 
 			feed_for_elem, = dom.getElementsByTagNameNS(namespaces.XMLNS_IFACE, 'feed-for')
 
-			self.note("Implementation metadata written to %s" % local_feed)
+			self.note(indent, "Implementation metadata written to %s" % local_feed)
 
 			# No point adding it to the system store when only the user has the feed...
 			store = policy.config.stores.stores[0]
-			self.note("Storing build in user cache %s..." % store.dir)
+			self.note(indent, "Storing build in user cache %s..." % store.dir)
 			policy.config.stores.add_dir_to_cache(actual_digest, buildenv.distdir)
 
 			iface = policy.config.iface_cache.get_interface(feed_for_elem.getAttribute('interface'))
-			self.note("Registering as feed for %s" % iface.uri)
+			self.note(indent, "Registering as feed for %s" % iface.uri)
 			feed = iface.get_feed(local_feed)
 			if feed:
-				self.note("WARNING: feed %s already registered!" % local_feed)
+				self.note(indent, "WARNING: feed %s already registered!" % local_feed)
 			else:
 				iface.extra_feeds.append(model.Feed(local_feed, impl.getAttribute('arch'), user_override = True))
 			writer.save_interface(iface)
@@ -198,50 +200,53 @@ class AutoCompiler:
 			new_feed = policy.config.iface_cache.get_interface(local_feed)
 			reader.update_from_cache(new_feed)
 		except:
-			self.note("\nBuild failed: leaving build directory %s for inspection...\n" % tmpdir)
+			self.note(indent, "\nBuild failed: leaving build directory %s for inspection...\n" % tmpdir)
 			raise
 		else:
 			ro_rmtree(tmpdir)
 
 	@tasks.async
-	def recursive_build(self, iface_uri, version = None):
+	def recursive_build(self, iface_uri, version = None, indent=''):
 		p = policy.Policy(iface_uri, config = self.config, src = True)
 		iface = p.config.iface_cache.get_interface(iface_uri)
 		p.solver.record_details = True
 		if version:
 			p.solver.extra_restrictions[iface] = [model.VersionRestriction(model.parse_version(version))]
+		if indent:
+			indent += '> '
+		indent += iface.get_name() + ' '
 
 		# For testing...
 		#p.target_arch = arch.Architecture(os_ranks = {'FreeBSD': 0, None: 1}, machine_ranks = {'i386': 0, None: 1, 'newbuild': 2})
 
 		while True:
-			self.heading(iface_uri)
-			self.note("\nSelecting versions for %s..." % iface.get_name())
+			self.heading(indent, iface_uri)
+			self.note(indent, "\nSelecting versions for %s..." % iface.get_name())
 			solved = p.solve_with_downloads()
 			if solved:
 				yield solved
 				tasks.check(solved)
 
 			if not p.solver.ready:
-				self.print_details(p.solver)
+				self.print_details(p.solver, indent)
 				raise SafeException("Can't find all required implementations (source or binary):\n" +
 					'\n'.join(["- %s -> %s" % (iface, p.solver.selections[iface])
 						   for iface in p.solver.selections]))
-			self.note("Selection done.")
+			self.note(indent, "Selection done.")
 
-			self.note("\nPlan:\n")
-			self.pretty_print_plan(p.solver, p.root)
-			self.note('')
+			self.note(indent, "\nPlan:\n")
+			self.pretty_print_plan(p.solver, p.root, indent)
+			self.note(indent, '')
 
 			for dep_iface, dep_impl in p.solver.selections.iteritems():
 				if dep_impl.id.startswith('0compile='):
-					build = self.recursive_build(dep_iface.uri, dep_impl.get_version())
+					build = self.recursive_build(dep_iface.uri, dep_impl.get_version(), indent)
 					yield build
 					tasks.check(build)
 					break	# Try again with that dependency built...
 			else:
-				self.note("No dependencies need compiling... compile %s itself..." % iface.get_name())
-				build = self.compile_and_register(p)
+				self.note(indent, "No dependencies need compiling... compile %s itself..." % iface.get_name())
+				build = self.compile_and_register(p, indent)
 				yield build
 				tasks.check(build)
 				return
@@ -252,14 +257,15 @@ class AutoCompiler:
 	def build(self):
 		tasks.wait_for_blocker(self.recursive_build(self.iface_uri))
 
-	def heading(self, msg):
-		self.note((' %s ' % msg).center(76, '='))
+	def heading(self, indent, msg):
+		self.note(indent, (' %s ' % msg).center(76, '='))
 
-	def note(self, msg):
-		print msg
+	def note(self, indent, msg):
+                for line in msg.split('\n'):
+                        print indent+msg
 
-	def note_error(self, msg):
-		self.overall.insert_at_cursor(msg + '\n')
+	def note_error(self, indent, msg):
+		self.overall.insert_at_cursor(indent+msg + '\n')
 
 class GUIHandler(handler.Handler):
 	def downloads_changed(self):
@@ -367,7 +373,7 @@ class GTKAutoCompiler(AutoCompiler):
 
 		def response(wd, resp):
 			if self.child is not None:
-				self.note_error('Sending TERM signal to build process group %d...' % self.child.pid)
+				self.note_error(indent, 'Sending TERM signal to build process group %d...' % self.child.pid)
 				os.kill(-self.child.pid, signal.SIGTERM)
 			else:
 				self.closed.trigger()
@@ -382,13 +388,13 @@ class GTKAutoCompiler(AutoCompiler):
 			msg = ''
 		self.details.set_text(msg)
 
-	def heading(self, msg):
-		self.overall.insert_at_end_and_scroll(msg + '\n', 'heading')
+	def heading(self, indent, msg):
+		self.overall.insert_at_end_and_scroll(indent + msg + '\n', 'heading')
 
-	def note(self, msg):
+	def note(self, indent, msg):
 		self.overall.insert_at_end_and_scroll(msg + '\n')
 
-	def note_error(self, msg):
+	def note_error(self, indent, msg):
 		self.overall.insert_at_end_and_scroll(msg + '\n', 'error')
 
 	def build(self):
@@ -396,7 +402,7 @@ class GTKAutoCompiler(AutoCompiler):
 		try:
 			tasks.wait_for_blocker(self.recursive_build(self.iface_uri))
 		except SafeException, ex:
-			self.note_error(str(ex))
+			self.note_error('', str(ex))
 		else:
 			self.heading('All builds completed successfully!')
 			self.dialog.set_response_sensitive(gtk.RESPONSE_CANCEL, False)
