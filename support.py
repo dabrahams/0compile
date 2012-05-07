@@ -22,7 +22,7 @@ def _(x): return x
 # normally expects from os.uname() on Posix (on Windows, arch._uname
 # has only two elements).
 import platform
-uname = arch._uname + platform.uname()[len(arch._uname):]
+uname = arch._uname + platform.uname()[len(arch._uname):5]
 
 ENV_FILE = '0compile.properties'
 XMLNS_0COMPILE = 'http://zero-install.sourceforge.net/2006/namespaces/0compile'
